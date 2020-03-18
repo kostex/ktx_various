@@ -13,6 +13,7 @@ local filecount = 0
 local line = ""
 local enter_name = false
 local file_item_clicked = 0
+local save_file_route = {}
 local filename_regel = "Enter_Save_FileName_Here"
 
 
@@ -107,14 +108,12 @@ function draw_ktx_save()
     ktx_draw_field(x,50,filename_regel,390,1,1,1,"black")
     for i=1,4 do
       if save_file_exists[i] then
-        status="Filled"
         if filename_regel ~= "Enter_Save_FileName_Here" and filename_regel ~= "" then
           ktx_draw_button(x + 110, y, "SaveAs",50,0,0.5,0,"white")
         end
-      else
-        status="Empty"
       end
-      ktx_draw_button(x, y, string.format("Slot %d %s", i, status), 100,0.3,0.3,0.3,"white")
+      status=save_file_route[i]
+      ktx_draw_button(x, y, status, 100,0.3,0.3,0.3,"white")
       y = y + 20
     end
   end
@@ -129,7 +128,9 @@ function read_file(filename)
       break
     end
   end
-  return string.sub(lines[4],1,4).."_"..string.sub(lines[5],1,4)
+  dep = string.sub(lines[4],1,4)
+  des = string.sub(lines[5],1,4)
+  return dep.."_"..des
 end
 
 function save_sit(n,s)
@@ -150,18 +151,21 @@ function refresh()
   local dir = directory_to_table(pad)
   filelist = {}
   save_file_exists = {false,false,false,false}
+  save_file_route = {"Slot 1 Empty","Slot 2 Empty","Slot 2 Empty","Slot 2 Empty"}
   filecount = 0
   for filenumber, filename in pairs(dir) do
-      if string.sub(filename,-3) == "dat" then
-        if string.sub(filename,1,6) ~= "B738X_" then
-          filecount = filecount + 1
-          filelist[filecount]={}
-          filelist[filecount][1] = string.sub(filename, 1, string.len(filename)-4)
-          filelist[filecount][2] = read_file(filename)
-        end
-      elseif string.sub(filename,1,6) == "B738X_" then
-        save_file_exists[tonumber(string.sub(filename,8,8))] = true
+    if string.sub(filename,-3) == "dat" then
+      if string.sub(filename,1,6) ~= "B738X_" then
+        filecount = filecount + 1
+        filelist[filecount]={}
+        filelist[filecount][1] = string.sub(filename, 1, string.len(filename)-4)
+        filelist[filecount][2] = read_file(filename)
+      else
+        sindex = tonumber(string.sub(filename,8,8))
+        save_file_exists[sindex] = true
+        save_file_route[sindex] = read_file(filename)
       end
+    end
   end
 end
 
