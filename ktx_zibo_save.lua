@@ -75,10 +75,10 @@ function draw_ktx_save()
 
   -- Black Background
   ktx_c("black")
-  if filecount > 4 then
+  if filecount > 7 then
     ktx_draw_rect(10, 20 ,800, 55 + filecount*20)
   else
-    ktx_draw_rect(10, 20 ,800, 150)
+    ktx_draw_rect(10, 20 ,800, 200)
   end
 
   ktx_draw_button(20,50,"Refresh Situations",350,0.6,0.9,0.6,"black")
@@ -101,9 +101,10 @@ function draw_ktx_save()
   if file_item_clicked > 0 then
     for i=1,4 do
       status=string.format("Load in %d", i)
-      ktx_draw_button(x, y, status, 100,1,0,0,"white")
+      ktx_draw_button(x, y, status, 100,0,0.5,0,"white")
       y = y + 20
     end
+    ktx_draw_button(x, y + 20, "Delete Situation", 100,1,0,0,"white")
   else
     ktx_draw_field(x,50,filename_regel,390,1,1,1,"black")
     for i=1,4 do
@@ -143,6 +144,12 @@ function load_sit(n,s)
   os.execute("cp '"..pad..s..".dat' '"..pad.."B738X_0"..n..".dat'")
   os.execute("cp '"..pad..s..".sit' '"..pad.."B738X_0"..n..".sit'")
   file_item_clicked = 0
+  refresh()
+end
+
+function delete_file(s)
+  file_item_clicked = 0
+  os.execute("rm '"..pad..s..".'*")
   refresh()
 end
 
@@ -207,13 +214,19 @@ function mouse_check()
     load_sit(clicked_item,filelist[file_item_clicked][1])
   end
 
+  if MOUSE_X > 400 and MOUSE_X < 500 and ktx_mouse_y() > 160 and ktx_mouse_y() < 180 then
+    -- Clicked on Delete
+    enter_name = false
+    delete_file(filelist[file_item_clicked][1])
+  end
+
   if MOUSE_X > 400 and MOUSE_X < 790 and ktx_mouse_y() > 30 and ktx_mouse_y() < 50 and file_item_clicked == 0 then
     -- Enter Filename
     enter_name = true
   else
     enter_name = false
   end
-  
+
 end
 
 function FromKeyboard()
@@ -240,8 +253,7 @@ function FromKeyboard()
 end
 
 do_on_keystroke("FromKeyboard()")
-
-add_macro("KTX_Zibo_Save", "ktx_save = true refresh()", "ktx_save = false", "activate")
-
 do_on_mouse_click("mouse_check()")
 do_every_draw("if ktx_save then draw_ktx_save() end")
+
+add_macro("KTX_Zibo_Save", "ktx_save = true refresh()", "ktx_save = false", "activate")
