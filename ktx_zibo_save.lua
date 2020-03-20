@@ -16,6 +16,7 @@ local istate = false
 local enter_name = false
 local file_item_clicked = 0
 local save_file_route = {}
+local save_file_equals = {}
 local filename_regel = "Enter_Save_FileName_Here"
 
 
@@ -104,21 +105,21 @@ function draw_ktx_save()
     x = 400
     if file_item_clicked > 0 then
       for i=1,4 do
-        status=string.format("Load in %d", i)
-        ktx_draw_button(x, y, status, 100,0,0.5,0,1,"white")
+        status=string.format("Load into Slot:%d", i)
+        ktx_draw_button(x, y, status, 120,0,0.5,0,1,"white")
         y = y + 20
       end
-      ktx_draw_button(x, y + 20, "Delete Situation", 100,1,0,0,1,"white")
+      ktx_draw_button(x, y + 20, "Delete Situation", 120,1,0,0,1,"white")
     else
       ktx_draw_field(x,50+offset,filename_regel,390,1,1,1,"black")
       for i=1,4 do
         if save_file_exists[i] then
           if filename_regel ~= "Enter_Save_FileName_Here" and filename_regel ~= "" then
-            ktx_draw_button(x + 110, y, "SaveAs",50,0,0.5,0,1,"white")
+            ktx_draw_button(x + 230, y, "Save As",50,0,0.5,0,1,"white")
           end
         end
-        status=save_file_route[i]
-        ktx_draw_button(x, y, status, 100,0.3,0.3,0.3,1,"white")
+        status="Slot"..i..": "..save_file_equals[i]
+        ktx_draw_button(x, y, status, 220,0,0.5,0.8,1,"white")
         y = y + 20
       end
     end
@@ -161,12 +162,21 @@ function delete_file(s)
   refresh()
 end
 
+function checksum_sit(s)
+  result = false
+  local f = io.popen("sum '"..pad..s.."'.sit")
+  cs = string.sub(f:read("*a"),1,6)
+  f:close()
+  return cs
+end
+
 function refresh()
   file_item_clicked = 0
   local dir = directory_to_table(pad)
   filelist = {}
   save_file_exists = {false,false,false,false}
-  save_file_route = {"Slot 1 Empty","Slot 2 Empty","Slot 2 Empty","Slot 2 Empty"}
+  save_file_route = {"Slot1: Empty","Slot2: Empty","Slot3: Empty","Slot4: Empty"}
+  save_file_equals = {"Unknown","Unknown","Unknown","Unknown"}
   filecount = 0
   for filenumber, filename in pairs(dir) do
     if string.sub(filename,-3) == "dat" then
@@ -175,10 +185,25 @@ function refresh()
         filelist[filecount]={}
         filelist[filecount][1] = string.sub(filename, 1, string.len(filename)-4)
         filelist[filecount][2] = read_file(filename)
+        filelist[filecount][3] = checksum_sit(filelist[filecount][1])
       else
         sindex = tonumber(string.sub(filename,8,8))
         save_file_exists[sindex] = true
         save_file_route[sindex] = read_file(filename)
+        save_file_equals[sindex] = save_file_route[sindex]
+      end
+    end
+  end
+  for i=1,4 do
+    if save_file_exists[i] then
+      cs = checksum_sit("B738X_0"..i)
+      if filecount > 0 then
+        for j=1,filecount do
+          if filelist[j][3] == cs then
+            save_file_equals[i]=filelist[j][1]
+            break
+          end
+        end
       end
     end
   end
@@ -190,21 +215,21 @@ function mouse_check()
     else
       mouse_over_hotspot = false
     end
-  
+
   if istate and MOUSE_STATUS == "down" then
     -- Interface shows
-    
+
     if MOUSE_X > 10 and MOUSE_X < 810 and ktx_mouse_y() > offset and ktx_mouse_y() < offset+20 then
       -- Clicked on Title bar
       istate = false
     end
-    
+
     if MOUSE_X > 20 and MOUSE_X < 370 and ktx_mouse_y() > 30+offset and ktx_mouse_y() < 50+offset then
       -- Clicked on Refresh
       enter_name = false
       refresh()
     end
-    
+
     if MOUSE_X > 20 and MOUSE_X < 370 and ktx_mouse_y() > 60+offset and ktx_mouse_y() < (60 + filecount*20)+offset then
       -- Clicked on a DAT file
       enter_name = false
@@ -216,7 +241,7 @@ function mouse_check()
       end
     end
 
-    if MOUSE_X > 510 and MOUSE_X < 560 and ktx_mouse_y() > 60+offset and ktx_mouse_y() < (60 + 4*20)+offset then
+    if MOUSE_X > 630 and MOUSE_X < 680 and ktx_mouse_y() > 60+offset and ktx_mouse_y() < (60 + 4*20)+offset then
       -- Clicked on a SaveAs button
       enter_name = false
       clicked_item = math.ceil((ktx_mouse_y()-60-offset)/20)
@@ -225,14 +250,14 @@ function mouse_check()
       end
     end
 
-    if MOUSE_X > 400 and MOUSE_X < 500 and ktx_mouse_y() > 60+offset and ktx_mouse_y() < (60 + 4*20)+offset and file_item_clicked > 0 then
+    if MOUSE_X > 400 and MOUSE_X < 520 and ktx_mouse_y() > 60+offset and ktx_mouse_y() < (60 + 4*20)+offset and file_item_clicked > 0 then
       -- Clicked on a Load button
       enter_name = false
       clicked_item = math.ceil((ktx_mouse_y()-60-offset)/20)
       load_sit(clicked_item,filelist[file_item_clicked][1])
     end
 
-    if MOUSE_X > 400 and MOUSE_X < 500 and ktx_mouse_y() > 160+offset and ktx_mouse_y() < 180+offset then
+    if MOUSE_X > 400 and MOUSE_X < 520 and ktx_mouse_y() > 160+offset and ktx_mouse_y() < 180+offset then
       -- Clicked on Delete
       enter_name = false
       delete_file(filelist[file_item_clicked][1])
