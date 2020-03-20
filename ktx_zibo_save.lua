@@ -9,10 +9,12 @@ DO_SOMETIMES_TIME_SEC = 600
 local pad = SYSTEM_DIRECTORY .. "Output/situations/"
 local filelist = {}
 local save_file_exists = {}
+local save_files = false
 local filecount = 0
 local line = ""
 local offset = 70
 local istate = false
+local delete_slot_mode = false
 local enter_name = false
 local file_item_clicked = 0
 local save_file_route = {}
@@ -36,6 +38,11 @@ function ktx_draw_button(x,y,s,size,r1,g1,b1,a1,color)
     ktx_draw_rect(x,y,size,16)
   end
   ktx_draw_string(x+2,y-4,s,color)
+end
+
+function ktx_draw_arrow(x,y,angle,length,color)
+  ktx_c(color)
+  graphics.draw_angle_arrow(x, SCREEN_HIGHT - y, angle, length, 20, 3)
 end
 
 function ktx_draw_field(x,y,s,size,r1,g1,b1,color)
@@ -103,16 +110,38 @@ function draw_ktx_save()
       y = y + 20
     end
 
-    y = 80+offset
     x = 400
-    if file_item_clicked > 0 then
+    y = 80+offset
+    for i=1,4 do
+      status="Slot"..i..": "..save_file_equals[i]
+      ktx_draw_button(x, y, status, 220,0,0.5,0.8,1,"white")
+      y = y + 20
+    end
+    if file_item_clicked == 0 and save_files then
+      ktx_draw_button(x,y,"Delete Slot Mode",100,1,0,0,1,"white")
+    end
+
+    if delete_slot_mode then
+      y = 80+offset
       for i=1,4 do
-        status=string.format("Load into Slot:%d", i)
-        ktx_draw_button(x, y, status, 120,0,0.5,0,1,"white")
+        if save_file_exists[i] then
+          ktx_draw_button(x + 230, y, "Delete", 50,1,0,0,1,"white")
+        end
         y = y + 20
       end
+    end
+
+    y = 80+offset
+    if file_item_clicked > 0 then
+      -- Load/Delete Mode
+      for i=1,4 do
+        ktx_draw_button(x + 230, y, "Load Sel", 60,0,0.5,0,1,"white")
+        y = y + 20
+      end
+      ktx_draw_arrow(x - 2, y + 12,270,20,"red")
       ktx_draw_button(x, y + 20, "Delete Situation", 120,1,0,0,1,"white")
     else
+      -- Save As Mode
       ktx_draw_field(x,50+offset,filename_regel,390,1,1,1,"black")
       for i=1,4 do
         if save_file_exists[i] then
@@ -120,13 +149,11 @@ function draw_ktx_save()
             ktx_draw_button(x + 230, y, "Save As",50,0,0.5,0,1,"white")
           end
         end
-        status="Slot"..i..": "..save_file_equals[i]
-        ktx_draw_button(x, y, status, 220,0,0.5,0.8,1,"white")
         y = y + 20
       end
     end
   else
-    -- Show HotSpot when mouse over
+    -- Show HotSpot
     ktx_draw_button(0,offset+20,"KTX_Zibo_Save",90,0.5,0.5,0.5,0.5,"white")
   end
 end
@@ -174,12 +201,14 @@ end
 
 function refresh()
   if not enter_name then
+    delete_slot_mode = false
+    save_files = false
     file_item_clicked = 0
     local dir = directory_to_table(pad)
     filelist = {}
     save_file_exists = {false,false,false,false}
-    save_file_route = {"Slot1: Empty","Slot2: Empty","Slot3: Empty","Slot4: Empty"}
-    save_file_equals = {"Unknown","Unknown","Unknown","Unknown"}
+    save_file_route = {"Empty","Empty","Empty","Empty"}
+    save_file_equals = save_file_route
     filecount = 0
     for filenumber, filename in pairs(dir) do
       if string.sub(filename,-3) == "dat" then
@@ -192,8 +221,9 @@ function refresh()
         else
           sindex = tonumber(string.sub(filename,8,8))
           save_file_exists[sindex] = true
+          save_files = true
           save_file_route[sindex] = read_file(filename)
-          save_file_equals[sindex] = save_file_route[sindex]
+          save_file_equals[sindex] = save_file_route[sindex].." (no backup yet)"
         end
       end
     end
@@ -239,7 +269,7 @@ function mouse_check()
       end
     end
 
-    if MOUSE_X > 630 and MOUSE_X < 680 and ktx_mouse_y() > 60+offset and ktx_mouse_y() < (60 + 4*20)+offset then
+    if MOUSE_X > 630 and MOUSE_X < 680 and ktx_mouse_y() > 60+offset and ktx_mouse_y() < (60 + 4*20)+offset and file_item_clicked == 0 and filename_regel ~= "Enter_Save_FileName_Here" and filename_regel ~= "" then
       -- Clicked on a SaveAs button
       enter_name = false
       clicked_item = math.ceil((ktx_mouse_y()-60-offset)/20)
@@ -248,15 +278,29 @@ function mouse_check()
       end
     end
 
-    if MOUSE_X > 400 and MOUSE_X < 520 and ktx_mouse_y() > 60+offset and ktx_mouse_y() < (60 + 4*20)+offset and file_item_clicked > 0 then
+    if MOUSE_X > 630 and MOUSE_X < 690 and ktx_mouse_y() > 60+offset and ktx_mouse_y() < (60 + 4*20)+offset and file_item_clicked > 0 then
       -- Clicked on a Load button
       enter_name = false
       clicked_item = math.ceil((ktx_mouse_y()-60-offset)/20)
       load_sit(clicked_item,filelist[file_item_clicked][1])
     end
 
+    if MOUSE_X > 400 and MOUSE_X < 500 and ktx_mouse_y() > 140+offset and ktx_mouse_y() < 160+offset and file_item_clicked == 0 and save_files then
+      -- Clicked on Delete Slot MODE toggle
+      delete_slot_mode = not delete_slot_mode
+    end
+
+    if MOUSE_X > 630 and MOUSE_X < 690 and ktx_mouse_y() > 60+offset and ktx_mouse_y() < (60 + 4*20)+offset and file_item_clicked == 0 and delete_slot_mode then
+      -- Clicked on a Delete Slot button
+      enter_name = false
+      clicked_item = math.ceil((ktx_mouse_y()-60-offset)/20)
+      if save_file_exists[clicked_item] then
+        delete_file("B738X_0"..clicked_item)
+      end
+    end
+
     if MOUSE_X > 400 and MOUSE_X < 520 and ktx_mouse_y() > 160+offset and ktx_mouse_y() < 180+offset and file_item_clicked > 0 then
-      -- Clicked on Delete
+      -- Clicked on Delete Situation
       enter_name = false
       delete_file(filelist[file_item_clicked][1])
     end
@@ -300,7 +344,7 @@ end
 
 
 do_on_keystroke("FromKeyboard()")
-do_sometimes("refresh()")
+--do_sometimes("refresh()")
 do_on_mouse_click("mouse_check()")
 do_every_draw("if ktx_save then draw_ktx_save() end")
 
