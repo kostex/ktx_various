@@ -5,7 +5,7 @@ require("graphics")
 
 
 dataref("H", "sim/graphics/view/window_height", "readonly", 1)
-DO_SOMETIMES_TIME_SEC = 60
+DO_SOMETIMES_TIME_SEC = 600
 local pad = SYSTEM_DIRECTORY .. "Output/situations/"
 local filelist = {}
 local save_file_exists = {}
@@ -86,7 +86,9 @@ function draw_ktx_save()
       ktx_draw_rect(10, 20+offset ,800, -200)
     end
 
-    ktx_draw_button(20,50+offset,"Refresh Situations",350,0.6,0.9,0.6,1,"black")
+    if not enter_name then
+      ktx_draw_button(20,50+offset,"Manual Refresh Situations",350,0.6,0.9,0.6,1,"black")
+    end
 
     y = 80+offset
     x = 20
@@ -171,37 +173,39 @@ function checksum_sit(s)
 end
 
 function refresh()
-  file_item_clicked = 0
-  local dir = directory_to_table(pad)
-  filelist = {}
-  save_file_exists = {false,false,false,false}
-  save_file_route = {"Slot1: Empty","Slot2: Empty","Slot3: Empty","Slot4: Empty"}
-  save_file_equals = {"Unknown","Unknown","Unknown","Unknown"}
-  filecount = 0
-  for filenumber, filename in pairs(dir) do
-    if string.sub(filename,-3) == "dat" then
-      if string.sub(filename,1,6) ~= "B738X_" then
-        filecount = filecount + 1
-        filelist[filecount]={}
-        filelist[filecount][1] = string.sub(filename, 1, string.len(filename)-4)
-        filelist[filecount][2] = read_file(filename)
-        filelist[filecount][3] = checksum_sit(filelist[filecount][1])
-      else
-        sindex = tonumber(string.sub(filename,8,8))
-        save_file_exists[sindex] = true
-        save_file_route[sindex] = read_file(filename)
-        save_file_equals[sindex] = save_file_route[sindex]
+  if not enter_name then
+    file_item_clicked = 0
+    local dir = directory_to_table(pad)
+    filelist = {}
+    save_file_exists = {false,false,false,false}
+    save_file_route = {"Slot1: Empty","Slot2: Empty","Slot3: Empty","Slot4: Empty"}
+    save_file_equals = {"Unknown","Unknown","Unknown","Unknown"}
+    filecount = 0
+    for filenumber, filename in pairs(dir) do
+      if string.sub(filename,-3) == "dat" then
+        if string.sub(filename,1,6) ~= "B738X_" then
+          filecount = filecount + 1
+          filelist[filecount]={}
+          filelist[filecount][1] = string.sub(filename, 1, string.len(filename)-4)
+          filelist[filecount][2] = read_file(filename)
+          filelist[filecount][3] = checksum_sit(filelist[filecount][1])
+        else
+          sindex = tonumber(string.sub(filename,8,8))
+          save_file_exists[sindex] = true
+          save_file_route[sindex] = read_file(filename)
+          save_file_equals[sindex] = save_file_route[sindex]
+        end
       end
     end
-  end
-  for i=1,4 do
-    if save_file_exists[i] then
-      cs = checksum_sit("B738X_0"..i)
-      if filecount > 0 then
-        for j=1,filecount do
-          if filelist[j][3] == cs then
-            save_file_equals[i]=filelist[j][1]
-            break
+    for i=1,4 do
+      if save_file_exists[i] then
+        cs = checksum_sit("B738X_0"..i)
+        if filecount > 0 then
+          for j=1,filecount do
+            if filelist[j][3] == cs then
+              save_file_equals[i]=filelist[j][1]
+              break
+            end
           end
         end
       end
@@ -210,12 +214,6 @@ function refresh()
 end
 
 function mouse_check()
-    if MOUSE_X > 0 and MOUSE_X < 90 and ktx_mouse_y() > offset and ktx_mouse_y() < offset+20 then
-      mouse_over_hotspot = true
-    else
-      mouse_over_hotspot = false
-    end
-
   if istate and MOUSE_STATUS == "down" then
     -- Interface shows
 
@@ -257,7 +255,7 @@ function mouse_check()
       load_sit(clicked_item,filelist[file_item_clicked][1])
     end
 
-    if MOUSE_X > 400 and MOUSE_X < 520 and ktx_mouse_y() > 160+offset and ktx_mouse_y() < 180+offset then
+    if MOUSE_X > 400 and MOUSE_X < 520 and ktx_mouse_y() > 160+offset and ktx_mouse_y() < 180+offset and file_item_clicked > 0 then
       -- Clicked on Delete
       enter_name = false
       delete_file(filelist[file_item_clicked][1])
@@ -300,7 +298,9 @@ function FromKeyboard()
 	end
 end
 
+
 do_on_keystroke("FromKeyboard()")
+do_sometimes("refresh()")
 do_on_mouse_click("mouse_check()")
 do_every_draw("if ktx_save then draw_ktx_save() end")
 
