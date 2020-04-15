@@ -2,6 +2,7 @@
 -- https://github.com/kostex/ktx_various/
 
 require("graphics")
+local sha = require"sha2"
 
 local dos = false
 if package.config:sub(1,1) == "\\" then
@@ -217,18 +218,24 @@ function delete_file(s)
 end
 
 function checksum_sit(s)
-  result = false
   local f
-  if dos then
-    f = io.popen('certutil -hashfile "'..pad..s..'.sit" | findstr -v ash')
-    cs = f:read("*a")
-  else
-    f = io.popen("sum '"..pad..s.."'.sit")
-    cs = string.sub(f:read("*a"),1,6)
-  end
-  f:close()
+  local sha1 = sha.sha1
+  f = io.open( pad..s..'.sit', 'r')
+  cs = sha1( f:read("*a") )
+  f.close()
   return cs
 end
+
+--  local f
+--  if dos then
+--    f = io.popen('certutil -hashfile "'..pad..s..'.sit" | findstr -v ash')
+--    cs = f:read("*a")
+--  else
+--    f = io.popen("sum '"..pad..s.."'.sit")
+--    cs = string.sub(f:read("*a"),1,6)
+--  end
+--  f:close()
+--  return cs
 
 function refresh()
   if not enter_name then
